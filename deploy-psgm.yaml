@@ -1,0 +1,98 @@
+---
+- name: Deploy Pointstreak-Groupme to GCP
+  # hosts: all   # commented out for safety
+  hosts: local
+  vars: 
+    install_dir: /home/gfrasca/testpsgm/
+    env_name: dev
+    user: gfrasca
+    project_dir: pointstreak-groupme
+    src_dir: pointstreak-groupme
+  tasks:
+    - name: Ping hosts
+      ansible.builtin.ping:
+
+    - name: Create base projectDirectory
+      ansible.builtin.file:
+        path: "{{ install_dir }}/{{ env_name }}/{{ project_dir }}"
+        state: directory
+
+
+    # TODO(gfrasca): Put these inside the src_dir for a flatter structure.
+    # Currently strucutred this way for compatibility with deployed projects
+    - name: Create "{{ item }}" Directory
+      ansible.builtin.file:
+        path: "{{ install_dir }}/{{ env_name }}/{{ project_dir }}/{{ item }}"
+        state: directory
+      loop:
+        - logs
+        - scripts
+        - "{{ src_dir }}"
+
+    - name: Deploy Pointstreak-Groupme to Server
+      ansible.builtin.git:
+        repo: https://github.com/gmfrasca/pointstreak-groupme.git
+        dest: "{{ install_dir }}/{{ env_name }}/{{ project_dir }}/{{ src_dir }}"
+        single_branch: true
+        version: master
+
+    - name: Check if virtualenv already installed
+      ansible.builtin.command: "pipenv --venv"
+      args:
+        chdir: "{{ install_dir }}/{{ env_name }}/{{ project_dir }}/{{ src_dir }}"
+      register: pipenv_venv_check_cmd
+      failed_when: false
+      ignore_errors: true
+      changed_when: false
+
+    - name: Run a pipenv install
+      ansible.builtin.command: "pipenv --bare install"
+      args:
+        chdir: "{{ install_dir }}/{{ env_name }}/{{ project_dir }}/{{ src_dir }}"
+      register: pipenv_install_cmd
+      when:
+        - ('No virtualenv' in pipenv_venv_check_cmd.stderr)
+
+    - name: Copy run script to project directory
+      ansible.builtin.copy:
+        src: files/psgroupme.sh
+        dest: "{{ install_dir }}/{{ env_name }}/{{ project_dir }}/scripts/psgroupme.sh"
+
+
+    - name: Copy config files to project directory
+      ansible.builtin.copy:
+        src: files/config
+        dest: "{{ install_dir }}/{{ env_name }}/{{ project_dir }}/{src_dir}/config"
+
+    - name: Copy service file to systemd directory
+      ansible.builtin.copy:
+        src: files/psgroupme.service
+        dest: "/etc/systemd/system/psgroupme-{{ env_name }}.service"
+
+    - name: Start psgroupme service
+      ansible.builtin.systemd:
+        name: "psgroupme-{{ env_name }}"
+        state: started
+
+    - name: Update crontab to pull codebase once per hour for dev or staging environment
+      ansible.builtin.cron:
+        name: "Pull codebase once per hour for dev or staging environment"
+        minute: "0"
+        hour: "*"
+        job: "git -C {{ install_dir }}/{{ env_name }}/{{ project_dir }}/{{ src_dir }} pull &> {{ install_dir }}/{{ env_name }}/{{ project_dir }}/logs/gitpull.log"
+        user: "{{ user }}"
+      when:
+        - env_name in ['dev', 'staging']
+
+    - name: Update crontab to restart psgroupme service once per day
+      ansible.builtin.cron:
+        name: "Restart psgroupme service once per day"
+        minute: "15"
+        hour: "10"
+        job: "sudo systemctl restart psgroupme-{{ env_name }} > {{ install_dir }}/{{ env_name }}/{{ project_dir }}/logs/service.log 2>&1"
+        user: "{{ user }}"
+
+    - name: Copy utility scripts to project directory
+      ansible.builtin.copy:
+        src: files/util
+        dest: "{{ install_dir }}/util"
