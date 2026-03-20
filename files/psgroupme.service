@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Poinstreak-Groupme ChatBots (psgroupme-{{ env }})
+
+[Service]
+Type=simple
+ExecStart=/bin/bash -c {{ install_dir }}/{{ env }}/pointstreak_groupme/scripts/psgroupme.sh
+User={{ user }}
+
+[Install]
+WantedBy=multi-user.target
