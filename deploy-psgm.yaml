@@ -59,12 +59,6 @@
         src: files/psgroupme.sh
         dest: "{{ install_dir }}/{{ env_name }}/{{ project_dir }}/scripts/psgroupme.sh"
 
-
-    - name: Copy config files to project directory
-      ansible.builtin.copy:
-        src: files/config
-        dest: "{{ install_dir }}/{{ env_name }}/{{ project_dir }}/{src_dir}/config"
-
     - name: Copy service file to systemd directory
       ansible.builtin.copy:
         src: files/psgroupme.service
@@ -101,3 +95,12 @@
       ansible.builtin.copy:
         src: files/util
         dest: "{{ install_dir }}/util"
+
+    - name: Copy config files to project directory
+      ansible.builtin.copy:
+        src: files/config/{{ env_name }}/{{ item }}
+        dest: "{{ install_dir }}/{{ env_name }}/{{ project_dir }}/{{ src_dir }}/config/{{item}}"
+      loop:
+        - bots.local.yaml
+        - timed.local.yaml
+        - responses.local.yaml
