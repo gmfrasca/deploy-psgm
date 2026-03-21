@@ -1,0 +1,6 @@
+install_dir: /home/gfrasca/testpsgm/
+user: gfrasca
+project_dir: pointstreak-groupme
+src_dir: pointstreak-groupme
+run_service: False
+

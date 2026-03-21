@@ -2,22 +2,28 @@
 - name: Deploy Pointstreak-Groupme to GCP
   # hosts: all   # commented out for safety
   hosts: local
-  vars: 
-    install_dir: /home/gfrasca/testpsgm/
+  vars:
     env_name: dev
-    user: gfrasca
-    project_dir: pointstreak-groupme
-    src_dir: pointstreak-groupme
-    run_service: False
+  vars_files:
+    - vars/common.yaml
   tasks:
     - name: Ping hosts
       ansible.builtin.ping:
+
+    - name: Check that target env is defined
+      ansible.builtin.assert:
+        that:
+          - env_name != ""
+
+    - name: Load env-specific vars
+      ansible.builtin.include_vars:
+        dir: vars
+        name: "{{env_name}}.yaml"
 
     - name: Create base projectDirectory
       ansible.builtin.file:
         path: "{{ install_dir }}/{{ env_name }}/{{ project_dir }}"
         state: directory
-
 
     # TODO(gfrasca): Put these inside the src_dir for a flatter structure.
     # Currently strucutred this way for compatibility with deployed projects
