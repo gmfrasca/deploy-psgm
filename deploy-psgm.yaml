@@ -8,6 +8,7 @@
     user: gfrasca
     project_dir: pointstreak-groupme
     src_dir: pointstreak-groupme
+    run_service: False
   tasks:
     - name: Ping hosts
       ansible.builtin.ping:
@@ -68,11 +69,13 @@
       ansible.builtin.copy:
         src: files/psgroupme.service
         dest: "/etc/systemd/system/psgroupme-{{ env_name }}.service"
+      when: run_service
 
     - name: Start psgroupme service
       ansible.builtin.systemd:
         name: "psgroupme-{{ env_name }}"
         state: started
+      when: run_service
 
     - name: Update crontab to pull codebase once per hour for dev or staging environment
       ansible.builtin.cron:
@@ -83,6 +86,7 @@
         user: "{{ user }}"
       when:
         - env_name in ['dev', 'staging']
+        - run_service
 
     - name: Update crontab to restart psgroupme service once per day
       ansible.builtin.cron:
@@ -91,6 +95,7 @@
         hour: "10"
         job: "sudo systemctl restart psgroupme-{{ env_name }} > {{ install_dir }}/{{ env_name }}/{{ project_dir }}/logs/service.log 2>&1"
         user: "{{ user }}"
+      when: run_service
 
     - name: Copy utility scripts to project directory
       ansible.builtin.copy:
