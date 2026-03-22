@@ -1,0 +1,3 @@
+# Ansible config files and secrets
+inventory.ini
+*.pass
