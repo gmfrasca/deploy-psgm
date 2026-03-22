@@ -27,7 +27,7 @@
 
     # TODO(gfrasca): Put these inside the src_dir for a flatter structure.
     # Currently strucutred this way for compatibility with deployed projects
-    - name: Create "{{ item }}" Directory
+    - name: Create base directory structure
       ansible.builtin.file:
         path: "{{ install_dir }}/{{ env_name }}/{{ project_dir }}/{{ item }}"
         state: directory
